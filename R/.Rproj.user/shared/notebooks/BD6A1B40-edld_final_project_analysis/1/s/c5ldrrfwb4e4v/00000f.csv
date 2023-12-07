@@ -1,0 +1,5 @@
+"0","# Set a seed for reproducibility"
+"0","set.seed(42)"
+"0",""
+"0","# Randomly select 1000 rows"
+"0","stackoverflow_df_short<- stackoverflow_df_og[sample(nrow(stackoverflow_df_og), 1000, replace = FALSE), ]"

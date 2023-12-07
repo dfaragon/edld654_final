@@ -1,0 +1,36 @@
+"0","#stackoverflow_tr_df <- data.frame(stackoverflow_tr)"
+"0","prep<- prep(blueprint, training = stackoverflow_tr)"
+"2","New names:"
+"0","prep"
+"2","
+"
+"2","[36m──[39m [1mRecipe[22m [36m────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+"
+"2","
+"
+"2","── Inputs 
+"
+"2","Number of variables by role
+"
+"2","outcome:     1
+predictor: 129
+id:          1
+"
+"2","
+"
+"2","── Training information 
+"
+"2","Training data contained 799 data points and no incomplete rows.
+"
+"2","
+"
+"2","── Operations 
+"
+"2","[36m•[39m Orthogonal polynomials on: [34mYearsCode[39m, [34mYearsCodePro[39m, [34mPreviousSalary[39m, [34mComputerSkills[39m | [3mTrained[23m
+"
+"2","[36m•[39m Centering and scaling for: [34mYearsCode_poly_1[39m, [34mYearsCodePro_poly_2[39m, [34mPreviousSalary_poly_3[39m, ... | [3mTrained[23m
+"
+"2","[36m•[39m Factor variables from: [34mEmployment[39m | [3mTrained[23m
+"
+"2","[36m•[39m Dummy variables from: [34mAge[39m, [34mAccessibility[39m, [34mEdLevel[39m, [34mGender[39m, [34mMentalHealth[39m, [34mMainBranch[39m, [34mCountry[39m, ... | [3mTrained[23m
+"

@@ -16,7 +16,7 @@ affiliation:
 
 authornote: |
 
-  This paper is a submission the EDLD 654: Machine Learning for Educational Data Science course at the University of Oregon. The data was obtained from Kaggle, an online data science community that host data set for public use. Exact datasource link here: https://www.kaggle.com/datasets/ayushtankha/70k-job-applicants-data-human-resource   
+  This paper is a submission the EDLD 654: Machine Learning for Educational Data Science course at the University of Oregon. The data was obtained from Kaggle, an online data science community that host data set for public use. Exact datasource link here: https://www.kaggle.com/datasets/ayushtankha/70k-job-applicants-data-human-resource. The github repository for this project can be found here https://github.com/dfaragon/edld654_final.git.    
 
   <!-- https://tinyurl.com/ybremelq -->
   

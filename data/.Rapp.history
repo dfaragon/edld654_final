@@ -1,0 +1,2 @@
+load("/Users/daragon/Dropbox (University of Oregon)/courses/Fall 2023/EDLD653-ML/final/data/table2.rds")
+load("/Users/daragon/Dropbox (University of Oregon)/courses/Fall 2023/EDLD653-ML/final/data/vip_np.rds")

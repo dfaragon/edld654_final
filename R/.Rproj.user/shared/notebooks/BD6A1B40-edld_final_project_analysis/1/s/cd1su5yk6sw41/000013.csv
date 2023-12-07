@@ -1,0 +1,5 @@
+"0","predicted_te_np <- predict(caret_np, newdata =stackoverflow_te, type='prob')"
+"2","New names:"
+"2","Warning: There are new levels in a factor: Angola, Belize, Mozambique, Uganda, Zambia, Timor-Leste, Kyrgyzstan, Guyana, Algeria"
+"2","Warning: prediction from rank-deficient fit; attr(*, ""non-estim"") has doubtful cases"
+"0","predicted_te_np "

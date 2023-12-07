@@ -1,0 +1,285 @@
+---
+title: "edld_final_project_analysis"
+author: "Denicia Espinosa Aragon"
+date: "2023-11-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Package names
+packages <- c("ggplot2", "here", "dplyr", "tidyr", "rio", "knitr", "readr", "data.table", "stringr", "hunspell", "rticles", "papaja", "tidyverse", "recipes", "caret", "finalfit", "fastDummies", "purrr", "forcats") # Install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+install.packages(packages[!installed_packages])
+}
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+### import data 
+```{r}
+stackoverflow_df_og <- rio::import("data/stackoverflow_full.csv")
+#str(stackoverflow_df_og)
+
+### reduce the amount of data so it can run on personal computer 
+# Set a seed for reproducibility
+set.seed(42)
+
+# Randomly select 1000 rows
+stackoverflow_df_short<- stackoverflow_df_og[sample(nrow(stackoverflow_df_og), 10000, replace = FALSE), ]
+
+str(stackoverflow_df_short)
+#table(stackoverflow_df_short$Country)
+```
+
+### creating initial dummy variables for "HaveWorkedWith" because the of the complexity of the data 
+```{r}
+# need outcome variable to be categorical 
+stackoverflow_df_short$Employed <- as.factor(stackoverflow_df_short$Employed)
+
+# creating dummy variables for HaveWorkedWith 
+stackoverflow_workedWith <- stackoverflow_df_short %>%
+  select("V1", "HaveWorkedWith") %>%
+  tidyr::separate_rows(HaveWorkedWith, sep = ";") %>% 
+  filter(HaveWorkedWith != "") %>% 
+  mutate(value = 1) %>% 
+  pivot_wider(
+    names_from = HaveWorkedWith,
+    values_from = value,
+    values_fill = 0
+  ) %>%
+  mutate(across(-V1, ~ifelse(. == 1, "Yes", "No")))
+```
+
+
+### creating all other dummy variables becasue it is not working in blueprint
+```{r} 
+# Use dummy_cols to create dummy variables
+# stackoverflow_df_dummy <- dummy_cols(stackoverflow_df_short, select_columns = c("Accessibility",  "Age", "Country","EdLevel", "Employment", "Gender", "MainBranch","MentalHealth"), remove_selected_columns = TRUE)
+
+# place HaveWorkedWith dummy variables into the full dataset 
+#stackoverflow_df_wide <- merge(stackoverflow_df_dummy, stackoverflow_workedWith, by = "V1")
+stackoverflow_df_wide <- merge(stackoverflow_df_short, stackoverflow_workedWith, by = "V1")
+
+# remove "HaveWorkedWith" since there are not dummy variables of it 
+stackoverflow_df_wide <- stackoverflow_df_wide %>%
+  select(!"HaveWorkedWith")
+
+# Replace spaces with underscores in variable names
+names(stackoverflow_df_wide) <- gsub(" ", "_", names(stackoverflow_df_wide))
+
+```
+
+### remove countries that only have one participant in them as we cannot run a model when training and testing sets won't be able to have both 
+
+```{r}
+
+```
+
+
+
+```{r} 
+library(forcats)
+
+# exclude variables we don't want to convert to factors
+exclude_vars <- c("V1", "YearsCode", "YearsCodePro", "ComputerSkills", "PreviousSalary", "Gender", "EdLevel", "MentalHealth", "MainBranch", "Age", "Accessibility", "Employment", "Country")
+
+# convert all dummy variables to factors
+stackoverflow_df_wide <- stackoverflow_df_wide %>%
+  mutate(across(where(is.integer), as.numeric)) %>%
+  mutate(across(
+    .cols = -c(exclude_vars),
+    .fns = as.factor
+  ))  %>%
+ # mutate(across(where(is.factor), ~ if (nlevels(.) > 1) . else NA)) %>%
+  #mutate(Employed = factor(Employed, levels = c(0,1), labels = c("no", "yes"))) %>%
+  mutate_if(is.integer, as.numeric)
+  
+
+
+#str(stackoverflow_df_wide)
+```
+
+### investigate missingness 
+     
+    this data set was already preprocessed and cleaned, but to double-check we will investigate missingness
+```{r}
+require(finalfit)
+
+ff_glimpse(stackoverflow_df_wide)$Continuous[,c('n','missing_percent')]
+
+ff_glimpse(stackoverflow_df_wide)$Categorical[,c('n','missing_percent')]
+
+```
+
+    did not find any missingess in the data set for continuous and categorical variables
+
+
+## blueprint 
+
+
+```{r}
+categorical <- names(stackoverflow_df_wide)[sapply(stackoverflow_df_wide, is.character)]
+
+# Print the list of categorical variables
+print(categorical)
+```
+
+```{r} 
+# Recipe/Blueprint for data preprocessing
+blueprint <- recipe(x     = stackoverflow_df_wide,
+                    vars  = colnames(stackoverflow_df_wide),
+                  #  vars  = c(id,outcome,categorical,numeric), # declare variables 
+                     roles = c('id',rep('predictor',12),'outcome', rep('predictor',117))) %>%
+   step_dummy(all_of(categorical),one_hot=TRUE)
+
+ blueprint
+ 
+ summary(blueprint)
+```
+
+    
+
+# Split Dataset with 80-20 split 
+```{r}
+# split data 80-20 
+set.seed(10312022)  # for reproducibility
+  
+# loc      <- sample(1:nrow(stackoverflow_df_wide), round(nrow(stackoverflow_df_wide) * 0.8))
+# stackoverflow_tr  <- stackoverflow_df_wide[loc, ]
+# stackoverflow_te  <- stackoverflow_df_wide[-loc, ]
+# 
+# dim(stackoverflow_tr)
+# 
+# dim(stackoverflow_te)
+
+
+
+# needed to separate the data 
+index <- createDataPartition(stackoverflow_df_wide$Employed, p = 0.8, list = FALSE)
+
+stackoverflow_tr <- stackoverflow_df_wide[index, ]
+stackoverflow_te <- stackoverflow_df_wide[-index, ]
+
+dim(stackoverflow_tr)
+dim(stackoverflow_te)
+```
+
+# 10-Fold Cross-Validation with random shuffle
+```{r}
+      stackoverflow_tr = stackoverflow_tr[sample(nrow(stackoverflow_tr)),]
+
+# Create 10 folds with equal size
+
+      folds = cut(seq(1,nrow(stackoverflow_tr)),breaks=10,labels=FALSE)
+  
+# Create the list for each fold 
+      
+      my.indices <- vector('list',10)
+      for(i in 1:10){
+        my.indices[[i]] <- which(folds!=i)
+      }
+      
+cv <- trainControl(method          = "cv",
+                   index           = my.indices,
+                   classProbs      = TRUE,      # predicted probabilities (logistic log function) 
+                   summaryFunction = mnLogLoss) # loss function 
+```
+
+# Train Model To Predict Scores Using Linear Regression Without Any Regularization. 
+
+### grid without regularization 
+```{r}
+grid_np <- expand.grid(alpha = 0, lambda = 0)
+grid_np
+```
+### The function produces a warning, if there are no complete cases or no factor variables to summarize.
+```{r}
+debug_contr_error <- function (dat, subset_vec = NULL) {
+  if (!is.null(subset_vec)) {
+    ## step 0
+    if (mode(subset_vec) == "logical") {
+      if (length(subset_vec) != nrow(dat)) {
+        stop("'logical' `subset_vec` provided but length does not match `nrow(dat)`")
+        }
+      subset_log_vec <- subset_vec
+      } else if (mode(subset_vec) == "numeric") {
+      ## check range
+      ran <- range(subset_vec)
+      if (ran[1] < 1 || ran[2] > nrow(dat)) {
+        stop("'numeric' `subset_vec` provided but values are out of bound")
+        } else {
+        subset_log_vec <- logical(nrow(dat))
+        subset_log_vec[as.integer(subset_vec)] <- TRUE
+        } 
+      } else {
+      stop("`subset_vec` must be either 'logical' or 'numeric'")
+      }
+    dat <- base::subset(dat, subset = subset_log_vec)
+    } else {
+    ## step 1
+    dat <- stats::na.omit(dat)
+    }
+  if (nrow(dat) == 0L) warning("no complete cases")
+  ## step 2
+  var_mode <- sapply(dat, mode)
+  if (any(var_mode %in% c("complex", "raw"))) stop("complex or raw not allowed!")
+  var_class <- sapply(dat, class)
+  if (any(var_mode[var_class == "AsIs"] %in% c("logical", "character"))) {
+    stop("matrix variables with 'AsIs' class must be 'numeric'")
+    }
+  ind1 <- which(var_mode %in% c("logical", "character"))
+  dat[ind1] <- lapply(dat[ind1], as.factor)
+  ## step 3
+  fctr <- which(sapply(dat, is.factor))
+  if (length(fctr) == 0L) warning("no factor variables to summary")
+  ind2 <- if (length(ind1) > 0L) fctr[-ind1] else fctr
+  dat[ind2] <- lapply(dat[ind2], base::droplevels.factor)
+  ## step 4
+  lev <- lapply(dat[fctr], base::levels.default)
+  nl <- lengths(lev)
+  ## return
+  list(nlevels = nl, levels = lev)
+  }
+```
+
+```{r}
+debug_contr_error(stackoverflow_tr)
+```
+
+
+```{r}
+caret_np <- caret::train(blueprint, 
+                          data      = stackoverflow_tr, 
+                          method    = "glm",          
+                          family    = 'binomial',     # classification/binary outcome
+                          metric    = 'logLoss',   
+                         tuneGrid = grid_np,
+                          trControl = cv)
+caret_np
+```
+# the blueprint adds a ton of dumy variables for the type of coding languages individuals have used, therefore, need to run the blueprint on the testing data 
+
+```{r}
+#stackoverflow_tr_df <- data.frame(stackoverflow_tr)
+prep<- prep(blueprint, training = stackoverflow_tr)
+prep
+```
+ 
+```{r}
+predicted_tr_np <- predict(caret_np, newdata =stackoverflow_tr, type='prob')
+```
+## Checking No Penalty Model Performance on Test Data
+```{r}
+predicted_te_np <- predict(caret_np, newdata =stackoverflow_te, type='prob')
+predicted_te_np 
+```
+
+```{r}
+dim(predicted_te_np) 
+
+head(predicted_te_np) 
+```
+

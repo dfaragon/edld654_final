@@ -1,0 +1,194 @@
+---
+title: "edld_final_project_analysis"
+author: "Denicia Espinosa Aragon"
+date: "2023-11-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Package names
+packages <- c("ggplot2", "here", "dplyr", "tidyr", "rio", "knitr", "readr", "data.table", "stringr", "hunspell", "rticles", "papaja", "tidyverse", "recipes", "caret", "finalfit") # Install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+install.packages(packages[!installed_packages])
+}
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+### import data 
+```{r}
+stackoverflow_df_og <- rio::import("data/stackoverflow_full.csv")
+str(stackoverflow_df_og)
+```
+### reduce the amount of data so it can run on personal computer 
+```{r}
+# Set a seed for reproducibility
+set.seed(42)
+
+# Randomly select 1000 rows
+stackoverflow_df_short<- stackoverflow_df_og[sample(nrow(stackoverflow_df_og), 1000, replace = FALSE), ]
+```
+
+
+### creating initial dummy variables for "HaveWorkedWith" because the of the complexity of the data 
+```{r}
+stackoverflow_workedWith <- stackoverflow_df_short %>%
+  select("V1", "HaveWorkedWith") %>%
+  tidyr::separate_rows(HaveWorkedWith, sep = ";") %>% 
+  filter(HaveWorkedWith != "") %>% 
+  mutate(value = 1) %>% 
+  pivot_wider(
+    names_from = HaveWorkedWith,
+    values_from = value,
+    values_fill = 0
+  ) %>%
+  mutate(across(-V1, ~ifelse(. == 1, "Yes", "No")))
+```
+
+```{r}
+# place HaveWorkedWith dummy variables into the full dataset 
+stackoverflow_df_wide <- merge(stackoverflow_df_og, stackoverflow_workedWith, by = "V1")
+
+# remove "HaveWorkedWith" since there are not dummy variables of it 
+stackoverflow_df <- stackoverflow_df_wide %>%
+  select(!"HaveWorkedWith")
+
+```
+
+
+
+### declare variable types for blueprint
+```{r}
+# declare variable types 
+outcome <- c('Employed')
+
+id      <- c('V1')
+
+# we don't have HaveWorkedWith dummy variables here as they are already preprocessed 
+categorical <- c('Age','Accessibility','EdLevel','Gender','MentalHealth',
+                 'MainBranch','Country', 'Employment')
+
+numeric <- c('YearsCode', 'YearsCodePro', 'PreviousSalary', 'ComputerSkills')
+
+#cyclic <- c('date','month')
+```
+
+
+### investigate missingness 
+     
+    this data set was already preprocessed and cleaned, but to double-check we will investigate missingness
+```{r}
+require(finalfit)
+
+ff_glimpse(stackoverflow_df)$Continuous[,c('n','missing_percent')]
+
+ff_glimpse(stackoverflow_df)$Categorical[,c('n','missing_percent')]
+
+```
+
+    did not find any missingess in the data set for continuous and categorical variables 
+
+
+## WHY IS IT REMOVING ALL OTHER VARIABLE AFTER PREPROCESSING??
+## blueprint 
+```{r} 
+# Recipe/Blueprint for data preprocessing
+blueprint <- recipe(x     = stackoverflow_df,
+                    vars  = colnames(stackoverflow_df),
+                  #  vars  = c(id,outcome,categorical,numeric), # declare variables 
+                     roles = c('id',rep('predictor',12),'outcome', rep('predictor',117))) %>%  
+#   step_impute_mean(all_of(numeric)) %>% # calculates mean for missingness for numeric variables
+ #  step_impute_mode(all_of(categorical)) %>% # calculates mean for missingness for categorical variables
+   step_poly(all_of(numeric),degree=3) %>%  # creates new columns that are basis expansions of variables using orthogonal polynomials
+   step_normalize(paste0(numeric,'_poly_',1:3)) %>% # standardize variables
+   step_num2factor(Employment,
+                  transform = function(x) x + 1,
+                  levels=c('No','Yes')) %>%
+    step_dummy(all_of(categorical),one_hot=TRUE) 
+
+ blueprint
+ 
+ summary(blueprint)
+```
+
+    
+
+# Split Dataset with 80-20 split 
+```{r}
+# split data 80-20 
+set.seed(10312022)  # for reproducibility
+  
+loc      <- sample(1:nrow(stackoverflow_df), round(nrow(stackoverflow_df) * 0.8))
+stackoverflow_tr  <- stackoverflow_df[loc, ]
+stackoverflow_te  <- stackoverflow_df[-loc, ]
+
+dim(stackoverflow_tr)
+
+dim(stackoverflow_te)
+```
+
+# 10-Fold Cross-Validation with random shuffle
+```{r}
+      stackoverflow_tr = stackoverflow_tr[sample(nrow(stackoverflow_tr)),]
+
+# Create 10 folds with equal size
+
+      folds = cut(seq(1,nrow(stackoverflow_tr)),breaks=10,labels=FALSE)
+  
+# Create the list for each fold 
+      
+      my.indices <- vector('list',10)
+      for(i in 1:10){
+        my.indices[[i]] <- which(folds!=i)
+      }
+      
+cv <- trainControl(method = "cv",
+                   index  = my.indices)
+```
+
+# Train Model To Predict Scores Using Linear Regression Without Any Regularization. 
+
+### grid without regularization 
+```{r}
+grid_np<- data.frame(alpha = 0, lambda = 0) 
+grid_np
+```
+
+```{r, warning = FALSE}
+caret_np <- caret::train(blueprint, 
+                          data      = stackoverflow_tr, 
+                          method    = "glmnet",          
+                          family    = 'binomial',     # classification/binary outcome
+                          metric    = 'logLoss',   
+                          tuneGrid = grid_np,
+                          trControl = cv)
+caret_np
+
+
+
+```
+# the blueprint adds a ton of dumy variables for the type of coding languages individuals have used, therefore, need to run the blueprint on the testing data 
+
+```{r}
+#stackoverflow_tr_df <- data.frame(stackoverflow_tr)
+prep<- prep(blueprint, training = stackoverflow_tr)
+prep
+```
+## WHY IS IT REMOVING ALL OTHER VARIABLE AFTER PREPROCESSING?? 
+```{r}
+stackoverflow_te_baked <- bake(prep, new_data = stackoverflow_te)
+```
+## Checking No Penalty Model Performance on Test Data
+```{r}
+predicted_te_np <- predict(caret_np, stackoverflow_te_baked, type='prob')
+```
+
+```{r}
+dim(predicted_te_np) 
+
+head(predicted_te_np) 
+```
+

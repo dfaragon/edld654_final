@@ -1,0 +1,10 @@
+"0","predicted_te_np <- predict(caret_np, stackoverflow_te_baked, type='prob')"
+"1","[1m[33mError[39m in `bake()`:[22m
+[33m![39m The following required columns are missing from `new_data`: ""Age"", ""Accessibility"", ""EdLevel"", ""Employment"", ""Gender"", ""MentalHealth"", ""MainBranch"", ""YearsCode"", ""YearsCodePro"", ""Country"", ""PreviousSalary"", ""ComputerSkills"".
+[34mℹ[39m These columns have one of the following roles, which are required at `bake()` time: ""predictor"".
+Backtrace:
+[90m 1. [39m[1mstats[22m::predict(caret_np, stackoverflow_te_baked, type = ""prob"")
+[90m 2. [39m[1mcaret[22m:::predict.train.recipe(...)
+[90m 3. [39mcaret:::rec_prob(...)
+[90m 5. [39m[1m[94mrecipes:::bake.recipe([39m[22mobject$recipe, new_data = newdata, all_predictors()[1m[94m)[39m[22m
+"

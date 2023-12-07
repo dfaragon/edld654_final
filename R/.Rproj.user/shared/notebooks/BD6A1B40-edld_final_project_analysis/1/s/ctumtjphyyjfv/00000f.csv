@@ -1,0 +1,7 @@
+"0","# place HaveWorkedWith dummy variables into the full dataset "
+"0","stackoverflow_df_wide <- merge(stackoverflow_df_og, stackoverflow_workedWith, by = ""V1"")"
+"0",""
+"0","# remove ""HaveWorkedWith"" since there are not dummy variables of it "
+"0","stackoverflow_df <- stackoverflow_df_wide %>%"
+"0","  select(!""HaveWorkedWith"")"
+"0",""

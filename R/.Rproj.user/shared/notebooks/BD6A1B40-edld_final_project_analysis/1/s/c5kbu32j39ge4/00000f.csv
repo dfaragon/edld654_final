@@ -1,0 +1,43 @@
+"0","# Recipe/Blueprint for data preprocessing"
+"0","blueprint <- recipe(x     = stackoverflow_df,"
+"0","                    vars  = colnames(stackoverflow_df),"
+"0","                  #  vars  = c(id,outcome,categorical,numeric), # declare variables "
+"0","                     roles = c('id',rep('predictor',12),'outcome', rep('predictor',117))) %>%  "
+"0","#   step_impute_mean(all_of(numeric)) %>% # calculates mean for missingness for numeric variables"
+"0"," #  step_impute_mode(all_of(categorical)) %>% # calculates mean for missingness for categorical variables"
+"0","   step_poly(all_of(numeric),degree=3) %>%  # creates new columns that are basis expansions of variables using orthogonal polynomials"
+"0","   step_normalize(paste0(numeric,'_poly_',1:3)) %>% # standardize variables"
+"0","   step_num2factor(Employment,"
+"0","                  transform = function(x) x + 1,"
+"0","                  levels=c('No','Yes')) %>%"
+"0","    step_dummy(all_of(categorical),one_hot=TRUE) "
+"0",""
+"0"," blueprint"
+"2","
+"
+"2","[36m──[39m [1mRecipe[22m [36m────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+"
+"2","
+"
+"2","── Inputs 
+"
+"2","Number of variables by role
+"
+"2","outcome:     1
+predictor: 129
+id:          1
+"
+"2","
+"
+"2","── Operations 
+"
+"2","[36m•[39m Orthogonal polynomials on: [34mall_of(numeric)[39m
+"
+"2","[36m•[39m Centering and scaling for: [34mpaste0(numeric, ""_poly_"", 1:3)[39m
+"
+"2","[36m•[39m Factor variables from: [34mEmployment[39m
+"
+"2","[36m•[39m Dummy variables from: [34mall_of(categorical)[39m
+"
+"0"," "
+"0"," summary(blueprint)"
