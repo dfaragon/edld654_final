@@ -1,0 +1,654 @@
+---
+title: "edld_final_project_analysis"
+author: "Denicia Espinosa Aragon"
+date: "2023-11-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Package names
+packages <- c("ggplot2", "here", "dplyr", "tidyr", "rio", "knitr", "readr", "data.table", "stringr", "hunspell", "rticles", "papaja", "tidyverse", "recipes", "caret", "finalfit", "fastDummies", "purrr", "forcats", "cutpointr", "vip") # Install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+install.packages(packages[!installed_packages])
+}
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+### import data 
+```{r}
+options(digits = 10)
+stackoverflow_df_og <- rio::import("data/stackoverflow_full.csv")
+
+stackoverflow_df_short<- stackoverflow_df_og 
+#str(stackoverflow_df_og)
+
+### reduce the amount of data so it can run on personal computer 
+# Set a seed for reproducibility
+set.seed(42)
+
+# Randomly select 1000 rows
+#stackoverflow_df_short<- stackoverflow_df_og[sample(nrow(stackoverflow_df_og), 70000, replace = FALSE), ]
+
+
+str(stackoverflow_df_og)
+#str(stackoverflow_df_short)
+#table(stackoverflow_df_short$Country)
+```
+
+### creating initial dummy variables for "HaveWorkedWith" because the of the complexity of the data 
+```{r}
+# need outcome variable to be categorical
+#stackoverflow_df_short$Employed <- as.factor(stackoverflow_df_short$Employed)
+
+ # creating dummy variables for HaveWorkedWith
+ # stackoverflow_workedWith <- stackoverflow_df_short %>%
+ #   select("V1", "HaveWorkedWith") %>%
+ #   tidyr::separate_rows(HaveWorkedWith, sep = ";") %>%
+ #   filter(HaveWorkedWith != "") %>%
+ #   mutate(value = 1) %>%
+ #   pivot_wider(
+ #     names_from = HaveWorkedWith,
+ #     values_from = value,
+ #     values_fill = 0
+ #   ) %>%
+ #   mutate(across(-V1, as.integer)) 
+
+
+```
+
+```{r}
+# Assuming your original dataframe is named 'df'
+# If not, replace 'df' with your actual dataframe name
+
+# Define a function to segment countries into continents
+segment_country <- function(country) {
+  if (country %in% c('United States of America', 'Canada', 'Mexico')) {
+    return('NorthAmerica')
+  } else if (country %in% c('United Kingdom of Great Britain and Northern Ireland', 'France', 'Germany', 'Spain', 'Italy', 'Portugal', 'Belgium', 'Netherlands', 'Austria', 'Switzerland', 'Denmark', 'Ireland', 'Norway', 'Sweden', 'Finland', 'Greece', 'Czech Republic', 'Slovakia', 'Hungary', 'Poland')) {
+    return('Europe')
+  } else if (country %in% c('Brazil', 'Argentina', 'Chile', 'Colombia', 'Peru', 'Venezuela, Bolivarian Republic of...', 'Bolivia')) {
+    return('South America')
+  } else if (country %in% c('China', 'Japan', 'South Korea', 'Viet Nam', 'India', 'Sri Lanka', 'Pakistan', 'Bangladesh', 'Indonesia', 'Malaysia', 'Philippines', 'Taiwan', 'Thailand', 'Cambodia', 'Myanmar', 'Laos', 'Singapore', 'Hong Kong (S.A.R.)')) {
+    return('Asia')
+  } else if (country %in% c('Australia', 'New Zealand', 'Fiji', 'Papua New Guinea', 'Solomon Islands', 'Vanuatu', 'Samoa', 'Tonga')) {
+    return('Australia')
+  } else {
+    return('Others')
+  }
+}
+
+# Apply the function to create a new column 'Continent'
+stackoverflow_df_short$Continent <- sapply(stackoverflow_df_short$Country, segment_country)
+
+```
+
+
+
+
+```{r} 
+ # # creating dummy variables for HaveWorkedWith
+ # stackoverflow_country <- stackoverflow_df_short %>%
+ #   select("V1", "Country") %>%
+ #   tidyr::separate_rows(Country, sep = ";") %>%
+ #   filter(Country != "") %>%
+ #   mutate(value = 1) %>%
+ #   pivot_wider(
+ #     names_from = Country,
+ #     values_from = value,
+ #     values_fill = 0
+ #   ) %>%
+ #   mutate(across(-V1, as.integer)) 
+```
+
+
+### creating all other dummy variables becasue it is not working in blueprint
+```{r} 
+# Use dummy_cols to create dummy variables
+# stackoverflow_df_dummy <- dummy_cols(stackoverflow_df_short, select_columns = c("Accessibility",  "Age", "Country","EdLevel", "Employment", "Gender", "MainBranch","MentalHealth"), remove_selected_columns = TRUE)
+
+# place HaveWorkedWith dummy variables into the full dataset
+#stackoverflow_df_wide <- merge(stackoverflow_df_dummy, stackoverflow_workedWith, by = "V1")
+# stackoverflow_df_wide <- merge(stackoverflow_df_short, stackoverflow_workedWith, by = "V1")
+#
+# remove "HaveWorkedWith" since there are not dummy variables of it
+stackoverflow_df_wide <- stackoverflow_df_short %>%
+  select(!c("HaveWorkedWith", "Country", "Accessibility", "Employment"))
+
+
+# # Replace spaces with underscores in variable names
+#names(stackoverflow_df_wide) <- gsub(" ", "_", names(stackoverflow_df_wide))
+
+```
+
+### investigate missingness 
+     
+    this data set was already preprocessed and cleaned, but to double-check we will investigate missingness
+```{r}
+require(finalfit)
+
+ff_glimpse(stackoverflow_df_wide)$Continuous[,c('n','missing_percent')]
+
+ff_glimpse(stackoverflow_df_wide)$Categorical[,c('n','missing_percent')]
+
+```
+
+    did not find any missingess in the data set for continuous and categorical variables
+
+########### Logistic Regression with No Penalty ########### 
+# Logistic Regression with No Penalty 
+
+## blueprint 
+
+```{r}
+#(stackoverflow_df_short)
+```
+
+
+```{r}
+categorical <- names(stackoverflow_df_wide)[sapply(stackoverflow_df_wide, is.character)]
+
+
+# Print the list of categorical variables
+print(categorical)
+```
+
+```{r} 
+
+# blueprint <- recipe(x     = stackoverflow_df_wide,
+#                     vars  = colnames(stackoverflow_df_wide),
+#                   #  vars  = c(id,outcome,categorical,numeric), # declare variables
+#                      roles = c('id',rep('predictor',11),'outcome', rep('predictor',118))) %>%
+#    step_dummy(all_of(categorical),one_hot=TRUE) %>%
+#    step_num2factor(Employed,
+#                   transform = function(x) x + 1,
+#                   levels=c('No','Yes'))
+
+blueprint <- recipe(x     = stackoverflow_df_wide,
+                    vars  = colnames(stackoverflow_df_wide),
+                  #  vars  = c(id,outcome,categorical,numeric), # declare variables
+                     roles = c('id',rep('predictor',9),'outcome', 'predictor')) %>%
+   step_dummy(all_of(categorical),one_hot=TRUE) %>%
+   step_num2factor(Employed,
+                  transform = function(x) x + 1,
+                  levels=c('No','Yes'))
+
+
+
+ blueprint
+
+ summary(blueprint)
+```
+
+
+# Split Dataset with 80-20 split 
+```{r}
+# split data 80-20 
+set.seed(10312022)  # for reproducibility
+  
+# loc      <- sample(1:nrow(stackoverflow_df_wide), round(nrow(stackoverflow_df_wide) * 0.8))
+# stackoverflow_tr  <- stackoverflow_df_wide[loc, ]
+# stackoverflow_te  <- stackoverflow_df_wide[-loc, ]
+# 
+# dim(stackoverflow_tr)
+# 
+# dim(stackoverflow_te)
+
+
+
+# needed to separate the data 
+index <- createDataPartition(stackoverflow_df_wide$Employed, p = 0.8, list = FALSE)
+
+stackoverflow_tr <- stackoverflow_df_wide[index, ]
+stackoverflow_te <- stackoverflow_df_wide[-index, ]
+
+dim(stackoverflow_tr)
+dim(stackoverflow_te)
+```
+
+# 10-Fold Cross-Validation with random shuffle
+```{r}
+      stackoverflow_tr = stackoverflow_tr[sample(nrow(stackoverflow_tr)),]
+
+# Create 10 folds with equal size
+
+      folds = cut(seq(1,nrow(stackoverflow_tr)),breaks=10,labels=FALSE)
+  
+# Create the list for each fold 
+      
+      my.indices <- vector('list',10)
+      for(i in 1:10){
+        my.indices[[i]] <- which(folds!=i)
+      }
+      
+cv <- trainControl(method          = "cv",
+                   index           = my.indices,
+                   classProbs      = TRUE,      # predicted probabilities (logistic log function) 
+                   summaryFunction = mnLogLoss) # loss function 
+```
+
+# Train Model To Predict Scores Using Linear Regression Without Any Regularization. 
+
+### grid without regularization 
+```{r}
+grid_np <- expand.grid(alpha = 0, lambda = 0)
+grid_np
+```
+
+### Train testing dataset with unregularized logistic regression
+
+```{r, warning=F}
+caret_np <- caret::train(blueprint, 
+                          data      = stackoverflow_tr, 
+                          method    = "glm",          
+                          family    = 'binomial',     # classification/binary outcome
+                          metric    = 'logLoss',   
+                        # tuneGrid = grid_np,
+                          trControl = cv)
+caret_np
+```
+
+## Checking No Penalty Model Performance on Test Data
+```{r}
+options(digits = 10)
+predicted_te_np <- predict(caret_np, newdata =stackoverflow_te, type='prob')
+head(predicted_te_np) 
+```
+
+## Evaluate and Report the Performance of the Unregularized Model on Test Dataset 
+### LogLoss, AUC, Accuracy, True Negative Rate, False Yes Rate, True Yes Rate, Precision 
+```{r}
+# Compute the AUC
+
+cut.obj <- cutpointr(x     = predicted_te_np$Yes, # variable is coming from your predictions, here, it is Yes or Negative
+                     class = stackoverflow_te$Employed,
+                     na.rm = TRUE)
+
+auc_np <-auc(cut.obj)
+
+
+# Confusion matrix assuming the threshold is 0.5
+
+pred_class_np <- ifelse(predicted_te_np$Yes>.5,1,0)
+
+confusion_np <- table(stackoverflow_te$Employed,pred_class_np)
+confusion_np 
+
+# LogLoss
+ll_np <- min(caret_np$results$logLoss)
+
+# Accuracy (TP+TN/TP+TN+FP+FN)
+# TP = confusion[2,2]
+# TN = confusion[1,1]
+# FP = confusion[1,2]
+# FN = confusion[2,1]
+
+acc_np <- (confusion_np[2,2] + confusion_np[1,1])/(confusion_np[2,2] + confusion_np[1,1]+ confusion_np[1,2] + confusion_np[2,1])
+
+# True Negative Rate (TN/TN+FP)
+
+tnr_np <- confusion_np[1,1]/(confusion_np[1,1]+confusion_np[1,2])
+
+# False Yes Rate 
+
+fpr_np <- confusion_np[1,2]/(confusion_np[1,1]+confusion_np[1,2])
+
+# True Yes Rate (TP/TP+FN)
+
+tpr_np <- confusion_np[2,2]/(confusion_np[2,1]+confusion_np[2,2])
+
+# Precision
+
+pre_np <- confusion_np[2,2]/(confusion_np[1,2]+confusion_np[2,2])
+
+
+# Create a data frame to store the results
+results_np_df <- data.frame(
+  Model = c("Non-Regularized Logistic Regression"),
+  LL = c(ll_np),
+  AUC = c(auc_np),
+  ACC = c(acc_np),
+  TPR = c(tpr_np),
+  TNR = c(tnr_np),
+  PRE = c(pre_np)
+)
+
+# Print the results data frame
+print(results_np_df) 
+
+```
+
+```{r}
+#jpeg(file="vip_caret_np.jpeg")
+vip_np <- vip(caret_np
+    , num_features = 10, geom = "point") + theme_bw()
+print(vip_np)
+dev.copy(jpeg, filename = 'imag_vip_np.jpg')
+dev.off()
+
+```
+
+
+# Finding an optimal cut-off value that maximizes a pre-defined metric
+```{r}
+# Finding an optimal cut-off value that maximizes a pre-defined metric
+cut.obj_np <- cutpointr(x     = predicted_te_np$Yes,
+                     class = stackoverflow_te$Employed,
+                     method = maximize_metric,
+                     metric = F1_score,
+                     na.rm = T)
+
+#plot
+plot(cut.obj_np)
+
+cut.obj_np$optimal_cutpoint
+```
+
+
+########### Logistic Regression with Ridge Penalty ########### 
+
+### convert all new HaveWorkedWith variables to factors for unregularized analysis 
+### glm needs them as factors. glmnet needs them as integers 
+
+
+# Logistic Regression with Ridge Penalty 
+
+### grid with ridge regression 
+```{r}
+# from 0.01 to 3 with increments of 0.01.
+grid_ridge <- data.frame(alpha = 0, lambda = c(seq(0,.001,.00001),.005,.01,.05,.1)) 
+head(grid_ridge)
+```
+
+
+### Train testing dataset with unregularized logistic regression
+
+```{r, warning=F}
+ridge <- caret::train(blueprint, 
+                          data      = stackoverflow_tr, 
+                          method    = "glmnet",          
+                          family    = 'binomial',     # classification/binary outcome
+                          metric    = 'logLoss',  
+                         trControl = cv,
+                         tuneGrid = grid_ridge)
+ridge
+```
+
+```{r}
+plot(ridge)
+```
+
+
+## Checking No Penalty Model Performance on Test Data
+```{r}
+predicted_te_ridge <- predict(ridge, newdata =stackoverflow_te, type='prob')
+head(predicted_te_ridge)
+```
+
+## Evaluate and Report the Performance of the Unregularized Model on Test Dataset 
+
+### LogLoss, AUC, Accuracy, True Negative Rate, False Yes Rate, True Yes Rate, Precision 
+```{r}
+# Compute the AUC
+
+cut.obj <- cutpointr(x     = predicted_te_ridge$Yes, # variable is coming from your predictions, here, it is Yes or Negative
+                     class = stackoverflow_te$Employed,
+                     na.rm = TRUE)
+
+auc_ridge <-auc(cut.obj)
+
+
+# Confusion matrix assuming the threshold is 0.5
+
+pred_class_ridge <- ifelse(predicted_te_ridge$Yes>.5,1,0)
+
+confusion_ridge <- table(stackoverflow_te$Employed,pred_class_ridge)
+confusion_ridge 
+
+# LogLoss
+ll_ridge <- min(ridge$results$logLoss)
+
+# Accuracy (TP+TN/TP+TN+FP+FN)
+# TP = confusion[2,2]
+# TN = confusion[1,1]
+# FP = confusion[1,2]
+# FN = confusion[2,1]
+
+acc_ridge <- (confusion_ridge[2,2] + confusion_ridge[1,1])/(confusion_ridge[2,2] + confusion_ridge[1,1]+ confusion_ridge[1,2] + confusion_ridge[2,1])
+
+# True Negative Rate (TN/TN+FP)
+
+tnr_ridge <- confusion_ridge[1,1]/(confusion_ridge[1,1]+confusion_ridge[1,2])
+
+# False Yes Rate 
+
+fpr_ridge <- confusion_ridge[1,2]/(confusion_ridge[1,1]+confusion_ridge[1,2])
+
+# True Yes Rate (TP/TP+FN)
+
+tpr_ridge <- confusion_ridge[2,2]/(confusion_ridge[2,1]+confusion_ridge[2,2])
+
+# Precision
+
+pre_ridge <- confusion_ridge[2,2]/(confusion_ridge[1,2]+confusion_ridge[2,2])
+
+
+# Create a data frame to store the results
+results_ridge_df <- data.frame(
+  Model = c("Logistic Regression with Ridge Penalty"),
+  LL = c(ll_ridge),
+  AUC = c(auc_ridge),
+  ACC = c(acc_ridge),
+  TPR = c(tpr_ridge),
+  TNR = c(tnr_ridge),
+  PRE = c(pre_ridge)
+)
+
+# Print the results data frame
+print(results_ridge_df) 
+
+```
+
+# Finding an optimal cut-off value that maximizes a pre-defined metric
+```{r}
+# Finding an optimal cut-off value that maximizes a pre-defined metric
+cut.obj_ridge <- cutpointr(x     = predicted_te_ridge$Yes,
+                     class = stackoverflow_te$Employed,
+                     method = maximize_metric,
+                     metric = F1_score,
+                     na.rm = T)
+
+#plot
+plot(cut.obj_ridge)
+
+cut.obj_ridge$optimal_cutpoint
+```
+
+```{r}
+# Set the file path for the PNG file
+vip_ridge <-  vip(ridge, num_features = 10, geom = "point") + theme_bw()
+print(vip_ridge)
+
+dev.copy(jpeg, filename = 'imag_vip_ridge.jpg')
+
+dev.off()
+```
+
+####### Bagged Decision Tree ##########
+```{r, warning=F}
+library(rpart)
+# Cross validation settings 
+    
+    set.seed(10302021) # for reproducibility
+    
+    stackoverflow_tr = stackoverflow_tr[sample(nrow(stackoverflow_tr)),]
+  
+  # Create 10 folds with equal size
+  
+    folds = cut(seq(1,nrow(stackoverflow_tr)),breaks=10,labels=FALSE)
+  
+  # Create the list for each fold 
+  
+    my.indices <- vector('list',10)
+    for(i in 1:10){
+      my.indices[[i]] <- which(folds!=i)
+    }
+    
+      
+  cv <- trainControl(method = "cv",
+                     index  = my.indices,
+                     classProbs = TRUE,
+                     summaryFunction = mnLogLoss)
+
+# Grid settings
+
+  # Notice that I use **'gini'** for splitrule because this is 
+  # now a classification problem.
+  
+  grid <- expand.grid(mtry = 13,
+                    splitrule='gini',
+                    min.node.size=2)
+  head(grid)
+
+# Run the BAGGED Trees with different number of trees 
+# 5, 20, 40, 60, ..., 200
+  
+    nbags <- c(5,seq(20,200,20))
+    
+    bags <- vector('list',length(nbags))
+
+    for(i in 1:length(nbags)){
+      
+      bags[[i]] <- caret::train(blueprint,
+                                data      = stackoverflow_tr,
+                                method    = 'ranger',
+                                trControl = cv,
+                                tuneGrid  = grid,
+                                metric    = 'logLoss',
+                                num.trees = nbags[i],
+                                max.depth = 60)
+    }
+```
+
+
+```{r}
+logLoss_ <- c()
+
+for(i in 1:length(nbags)){
+  
+  logLoss_[i] = bags[[i]]$results$logLoss
+}
+
+nbags[which.min(logLoss_)]
+```
+
+```{r}
+# Predict the probabilities for the observations in the test dataset
+
+predicted_te_bagged <- predict(bags[[11]], stackoverflow_te, type='prob')
+
+head(predicted_te_bagged)
+```
+
+## Evaluate and Report the Performance of the Bagged Trees on Test Dataset 
+
+### LogLoss, AUC, Accuracy, True Negative Rate, False Yes Rate, True Yes Rate, Precision 
+```{r}
+# Compute the AUC
+
+cut.obj_bagged <- cutpointr(x     = predicted_te_bagged$Yes, # variable is coming from your predictions, here, it is Yes or Negative
+                     class = stackoverflow_te$Employed,
+                     na.rm = TRUE)
+
+auc_bagged <-auc(cut.obj_bagged)
+
+
+# Confusion matrix assuming the threshold is 0.5
+
+pred_class_bagged <- ifelse(predicted_te_bagged$Yes>.5,1,0)
+
+confusion_bagged <- table(stackoverflow_te$Employed,pred_class_bagged)
+confusion_bagged
+
+
+
+# Accuracy (TP+TN/TP+TN+FP+FN)
+# TP = confusion[2,2]
+# TN = confusion[1,1]
+# FP = confusion[1,2]
+# FN = confusion[2,1]
+
+acc_bagged <- (confusion_bagged[2,2] + confusion_bagged[1,1])/(confusion_bagged[2,2] + confusion_bagged[1,1]+ confusion_bagged[1,2] + confusion_bagged[2,1])
+
+# True Negative Rate (TN/TN+FP)
+
+tnr_bagged <- confusion_bagged[1,1]/(confusion_bagged[1,1]+confusion_bagged[1,2])
+
+# False Yes Rate 
+
+fpr_bagged <- confusion_bagged[1,2]/(confusion_bagged[1,1]+confusion_bagged[1,2])
+
+# True Yes Rate (TP/TP+FN)
+
+tpr_bagged <- confusion_bagged[2,2]/(confusion_bagged[2,1]+confusion_bagged[2,2])
+
+# Precision
+
+pre_bagged <- confusion_bagged[2,2]/(confusion_bagged[1,2]+confusion_bagged[2,2])
+
+
+# Create a data frame to store the results
+results_bagged_df <- data.frame(
+  Model = c("Logistic Regression with Bagged Trees"),
+ # LL = c(ll_bagged),
+  AUC = c(auc_bagged),
+  ACC = c(acc_bagged),
+  TPR = c(tpr_bagged),
+  TNR = c(tnr_bagged),
+  PRE = c(pre_bagged)
+)
+
+# Print the results data frame
+print(results_bagged_df) 
+
+```
+
+
+#### Full Table 
+
+```{r}
+# Create a data frame to store the results
+# Create a data frame to store the results
+results_df <- data.frame(
+  Model = c("Non-Regularized Logistic Regression", "Logistic Regression with Ridge Penalty", "Logistic Regression with Bagged Trees"),
+  LL = c(ll_np, ll_ridge, ll_ridge),
+  AUC = c(auc_np, auc_ridge, auc_bagged),
+  ACC = c(acc_np, acc_ridge, acc_bagged),
+  TPR = c(tpr_np, tpr_ridge, tpr_bagged),
+  TNR = c(tnr_np, tnr_ridge, tnr_bagged),
+  PRE = c(pre_np, pre_ridge, pre_bagged)
+)
+
+# Print the results data frame
+print(results_df) 
+
+# results_df <- kbl(results_df, caption = "Table 2. Model Performace for All Models", booktabs = T) %>%
+#   kable_styling(full_width = F) %>%
+# column_spec(1, bold = F) %>%
+# column_spec(2, width = "30em") 
+
+saveRDS(results_df, file = "/Users/daragon/Dropbox (University of Oregon)/courses/Fall 2023/EDLD653-ML/final/data/table2.rds")
+
+
+# Assuming results_df is a data frame you want to write to a file
+# write.table(results_df, "/Users/daragon/Dropbox (University of Oregon)/courses/Fall 2023/EDLD653-ML/final/data/table2.txt", sep = "\t", row.names = FALSE)
+
+
+```
+
+
+
+

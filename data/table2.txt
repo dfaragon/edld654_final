@@ -1,0 +1,44 @@
+"x"
+"<table class=\"table\" style=\"width: auto !important; margin-left: auto; margin-right: auto;\">
+<caption>Table 2. Model Performace for All Models</caption>
+ <thead>
+  <tr>
+   <th style=\"text-align:left;\"> Model </th>
+   <th style=\"text-align:right;\"> LL </th>
+   <th style=\"text-align:right;\"> AUC </th>
+   <th style=\"text-align:right;\"> ACC </th>
+   <th style=\"text-align:right;\"> TPR </th>
+   <th style=\"text-align:right;\"> TNR </th>
+   <th style=\"text-align:right;\"> PRE </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style=\"text-align:left;\"> Non-Regularized Logistic Regression </td>
+   <td style=\"text-align:right;width: 30em; \"> 0.1265847 </td>
+   <td style=\"text-align:right;\"> 0.9960257 </td>
+   <td style=\"text-align:right;\"> 0.9949950 </td>
+   <td style=\"text-align:right;\"> 0.9944134 </td>
+   <td style=\"text-align:right;\"> 0.9956710 </td>
+   <td style=\"text-align:right;\"> 0.9962687 </td>
+  </tr>
+  <tr>
+   <td style=\"text-align:left;\"> Logistic Regression with Ridge Penalty </td>
+   <td style=\"text-align:right;width: 30em; \"> 0.1768456 </td>
+   <td style=\"text-align:right;\"> 0.9985257 </td>
+   <td style=\"text-align:right;\"> 0.9778002 </td>
+   <td style=\"text-align:right;\"> 0.9830827 </td>
+   <td style=\"text-align:right;\"> 0.9716776 </td>
+   <td style=\"text-align:right;\"> 0.9757463 </td>
+  </tr>
+  <tr>
+   <td style=\"text-align:left;\"> Logistic Regression with Bagged Trees </td>
+   <td style=\"text-align:right;width: 30em; \"> 0.1768456 </td>
+   <td style=\"text-align:right;\"> 0.9875330 </td>
+   <td style=\"text-align:right;\"> 0.9409409 </td>
+   <td style=\"text-align:right;\"> 0.9590317 </td>
+   <td style=\"text-align:right;\"> 0.9199134 </td>
+   <td style=\"text-align:right;\"> 0.9329710 </td>
+  </tr>
+</tbody>
+</table>"

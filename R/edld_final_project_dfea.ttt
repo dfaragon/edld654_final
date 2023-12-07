@@ -1,0 +1,90 @@
+\begin{table*}[hbt]
+\ifnextchar[{\eatarg}{}
+
+
+\caption{\label{tab:unnamed-chunk-1}Variable Descriptions}
+\centering
+\begin{tabular}[t]{>{}l>{\raggedright\arraybackslash}p{30em}}
+\toprule
+Variable & Description\\
+\midrule
+Age & Participant's age, categorical
+w/ 2 options: lessthan35,greaterthan35\\
+Gender & Participant's gender, categorical
+w/ 3 options: Man , Woman, NonBinary\\
+Continent & Participant's continent of origin,
+categorical\\
+ComputerSkills & Number of computer skills known by
+applicant, integer\\
+EdLevel & Education level of the applicant,
+categorical w/ 4 options: Undergraduate, Master, PhD, Other\\
+\addlinespace
+MainBranch & If the applicant is a professional
+developer, categorical w/ 2 options: Dev, NoDev\\
+MentalHealth & Mental Health of the participant,
+categorical w/ 2 options, Yes, No\\
+PreviousSalary & Previous salary of the participant,
+integer\\
+YearsCode & How long the applicant has been coding,
+integer\\
+YearsCodePro & How long the applicant has been coding in
+ a professional context, integer\\
+\addlinespace
+Employed & If the participant was hired or not,  categorical,
+ w/ 2 options: Yes, No\\
+\bottomrule
+\end{tabular}
+\end{table*}
+\efloatseparator
+ 
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.4815}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0864}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0864}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0864}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0864}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0864}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0864}}@{}}
+\caption{\label{tab:unnamed-chunk-3}Model Performance for All Models}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+LL
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+AUC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ACC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+TPR
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+TNR
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+PRE
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+LL
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+AUC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ACC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+TPR
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+TNR
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+PRE
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Non-Regularized Logistic Regression & 0.4437 & 0.8713 & 0.7836 & 0.7957 & 0.7696 & 0.8001 \\
+Logistic Regression with Ridge Penalty & 0.4597 & 0.8706 & 0.7847 & 0.7994 & 0.7677 & 0.7995 \\
+Logistic Regression with Bagged Trees & 0.4597 & 0.8548 & 0.7686 & 0.8032 & 0.7284 & 0.7742 \\
+\end{longtable}
