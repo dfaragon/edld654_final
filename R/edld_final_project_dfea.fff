@@ -1,0 +1,10 @@
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+
+\includegraphics[width=1.6in]{edld_final_project_dfea_files/figure-latex/unnamed-chunk-4-1} \caption{ }\label{fig:unnamed-chunk-4-3}
+\end{figure*}
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+
+\includegraphics[width=1.6in]{edld_final_project_dfea_files/figure-latex/unnamed-chunk-4-2} \caption{ }\label{fig:unnamed-chunk-4-4}
+\end{figure*}
